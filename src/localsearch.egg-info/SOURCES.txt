@@ -1,0 +1,13 @@
+pyproject.toml
+src/localsearch/__init__.py
+src/localsearch/cli.py
+src/localsearch/config.py
+src/localsearch.egg-info/PKG-INFO
+src/localsearch.egg-info/SOURCES.txt
+src/localsearch.egg-info/dependency_links.txt
+src/localsearch.egg-info/entry_points.txt
+src/localsearch.egg-info/requires.txt
+src/localsearch.egg-info/top_level.txt
+src/localsearch/scanner/__init__.py
+src/localsearch/scanner/discovery.py
+tests/test_scanner.py
