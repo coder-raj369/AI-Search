@@ -45,6 +45,13 @@ class DatabaseManager:
             )
             conn.execute(
                 """
+                CREATE VIRTUAL TABLE IF NOT EXISTS fts_chunks USING fts5(
+                    content, file_id UNINDEXED, file_path UNINDEXED, filename UNINDEXED, tokenize='porter unicode61'
+                )
+                """
+            )
+            conn.execute(
+                """
                 CREATE TABLE IF NOT EXISTS index_state (
                     key TEXT PRIMARY KEY,
                     value TEXT
@@ -75,6 +82,10 @@ class DatabaseManager:
 
     def delete_file(self, path: str) -> None:
         with sqlite3.connect(self.db_path) as conn:
+            row = conn.execute("SELECT id FROM files WHERE path = ?", (path,)).fetchone()
+            if row is not None:
+                conn.execute("DELETE FROM fts_chunks WHERE file_id = ?", (row[0],))
+                conn.execute("DELETE FROM chunks WHERE file_id = ?", (row[0],))
             conn.execute("DELETE FROM files WHERE path = ?", (path,))
             conn.commit()
 
@@ -83,20 +94,31 @@ class DatabaseManager:
             row = conn.execute("SELECT id FROM files WHERE path = ?", (file_path,)).fetchone()
             if row is None:
                 return
+            conn.execute("DELETE FROM fts_chunks WHERE file_id = ?", (row[0],))
             conn.execute("DELETE FROM chunks WHERE file_id = ?", (row[0],))
             conn.commit()
 
     def add_chunk(self, file_path: str, chunk_index: int, content: str, page_number: int | None = None, cell_number: int | None = None, metadata: dict[str, Any] | None = None) -> None:
         with sqlite3.connect(self.db_path) as conn:
-            row = conn.execute("SELECT id FROM files WHERE path = ?", (file_path,)).fetchone()
+            row = conn.execute("SELECT id, filename FROM files WHERE path = ?", (file_path,)).fetchone()
             if row is None:
                 raise ValueError(f"File not found in database: {file_path}")
-            conn.execute(
+            file_id, filename = row
+            chunk_metadata = json.dumps(metadata or {}, ensure_ascii=False)
+            cursor = conn.execute(
                 """
                 INSERT INTO chunks (file_id, chunk_index, content, page_number, cell_number, metadata_json)
                 VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                (row[0], chunk_index, content, page_number, cell_number, json.dumps(metadata or {}, ensure_ascii=False)),
+                (file_id, chunk_index, content, page_number, cell_number, chunk_metadata),
+            )
+            chunk_id = cursor.lastrowid
+            conn.execute(
+                """
+                INSERT INTO fts_chunks (rowid, content, file_id, file_path, filename)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (chunk_id, content, file_id, file_path, filename),
             )
             conn.commit()
 
