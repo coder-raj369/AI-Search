@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from localsearch.retrieval.bm25 import lexical_search
+from localsearch.retrieval.reranker import rerank_results
 from localsearch.retrieval.semantic import semantic_search
 
 
@@ -27,9 +28,12 @@ def reciprocal_rank_fusion(*ranked_lists: list[dict], k: int = 60) -> list[dict]
     return merged
 
 
-def hybrid_search(query: str, *, db_path: str | Path = "localsearch.db", limit: int = 10, file_type: str | None = None, path_filter: str | None = None) -> list[dict]:
+def hybrid_search(query: str, *, db_path: str | Path = "localsearch.db", limit: int = 10, file_type: str | None = None, path_filter: str | None = None, rerank: bool = True, reranker_model: str | None = None) -> list[dict]:
     bm25_results = lexical_search(query, db_path=db_path, limit=50, file_type=file_type, path_filter=path_filter)
     semantic_results = semantic_search(query, db_path=db_path, limit=50, file_type=file_type, path_filter=path_filter)
 
     fused = reciprocal_rank_fusion(bm25_results, semantic_results)
-    return fused[:limit]
+    candidates = fused[: max(limit * 2, 20)]
+    if rerank:
+        candidates = rerank_results(query, candidates, model_name=reranker_model)
+    return candidates[:limit]
