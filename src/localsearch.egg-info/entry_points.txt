@@ -1,2 +1,0 @@
-[console_scripts]
-localsearch = localsearch.cli:main
