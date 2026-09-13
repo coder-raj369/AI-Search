@@ -137,12 +137,39 @@ SQLite provides durable metadata and FTS5 lexical retrieval. Local serialized ve
 - full PDF text extraction with page metadata
 - file-aware chunking for notebook cells, Python symbols, Markdown headings, and PDF pages
 - embedding cache invalidation and batch generation
-- FastAPI localhost service
 - browser interface
 - filesystem watching
 - reproducible retrieval benchmark and failure analysis suite
 
 The distinction is intentional: this repository documents what is implemented today and what is being built next.
+
+## Local API
+
+The FastAPI service exposes the current retrieval pipeline on localhost:
+
+```bash
+uvicorn localsearch.api.app:app --host 127.0.0.1 --port 8000
+```
+
+Available endpoints:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/health` | Verify the local service is available |
+| `GET` | `/stats` | Return indexed file and chunk counts |
+| `POST` | `/search` | Run lexical, semantic, or hybrid retrieval |
+| `POST` | `/index` | Incrementally index selected directories |
+| `GET` | `/files/{id}` | Inspect indexed file metadata and chunks |
+
+Example request:
+
+```bash
+curl -X POST http://127.0.0.1:8000/search \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"tensor shape error","mode":"hybrid","limit":10}'
+```
+
+The service is intended for local use and binds to loopback by default in documented examples.
 
 ## Supported formats
 

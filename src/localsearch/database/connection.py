@@ -173,3 +173,50 @@ class DatabaseManager:
     def get_file_count(self) -> int:
         with sqlite3.connect(self.db_path) as conn:
             return int(conn.execute("SELECT COUNT(*) FROM files").fetchone()[0])
+
+    def get_chunk_count(self) -> int:
+        with sqlite3.connect(self.db_path) as conn:
+            return int(conn.execute("SELECT COUNT(*) FROM chunks").fetchone()[0])
+
+    def get_file_by_id(self, file_id: int) -> dict[str, Any] | None:
+        with sqlite3.connect(self.db_path) as conn:
+            row = conn.execute(
+                """
+                SELECT id, path, filename, extension, size_bytes, modified_at, hash, mime_type, indexed_at, metadata_json
+                FROM files WHERE id = ?
+                """,
+                (file_id,),
+            ).fetchone()
+            if row is None:
+                return None
+
+            chunks = conn.execute(
+                """
+                SELECT id, chunk_index, content, page_number, cell_number, metadata_json
+                FROM chunks WHERE file_id = ? ORDER BY chunk_index
+                """,
+                (file_id,),
+            ).fetchall()
+            return {
+                "id": row[0],
+                "path": row[1],
+                "filename": row[2],
+                "extension": row[3],
+                "size_bytes": row[4],
+                "modified_at": row[5],
+                "hash": row[6],
+                "mime_type": row[7],
+                "indexed_at": row[8],
+                "metadata": json.loads(row[9] or "{}"),
+                "chunks": [
+                    {
+                        "id": chunk[0],
+                        "chunk_index": chunk[1],
+                        "content": chunk[2],
+                        "page_number": chunk[3],
+                        "cell_number": chunk[4],
+                        "metadata": json.loads(chunk[5] or "{}"),
+                    }
+                    for chunk in chunks
+                ],
+            }

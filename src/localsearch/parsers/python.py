@@ -11,20 +11,25 @@ class PythonParser:
         file_path = Path(path)
         text = file_path.read_text(encoding="utf-8", errors="replace")
 
-        module = ast.parse(text)
         functions: list[str] = []
         classes: list[str] = []
         imports: list[str] = []
+        parse_error: str | None = None
 
-        for node in ast.walk(module):
-            if isinstance(node, ast.FunctionDef):
-                functions.append(node.name)
-            elif isinstance(node, ast.AsyncFunctionDef):
-                functions.append(node.name)
-            elif isinstance(node, ast.ClassDef):
-                classes.append(node.name)
-            elif isinstance(node, (ast.Import, ast.ImportFrom)):
-                imports.append(ast.get_source_segment(text, node) or "")
+        try:
+            module = ast.parse(text)
+        except SyntaxError as exc:
+            parse_error = f"SyntaxError: {exc.msg} (line {exc.lineno})"
+        else:
+            for node in ast.walk(module):
+                if isinstance(node, ast.FunctionDef):
+                    functions.append(node.name)
+                elif isinstance(node, ast.AsyncFunctionDef):
+                    functions.append(node.name)
+                elif isinstance(node, ast.ClassDef):
+                    classes.append(node.name)
+                elif isinstance(node, (ast.Import, ast.ImportFrom)):
+                    imports.append(ast.get_source_segment(text, node) or "")
 
         content_parts = [text]
         if functions:
@@ -44,6 +49,7 @@ class PythonParser:
                 "classes": classes,
                 "imports": imports,
                 "source": "python",
+                "parse_error": parse_error,
             },
             language="python",
         )
