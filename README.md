@@ -221,7 +221,7 @@ localsearch search "training pipeline" --path ~/Documents/projects
 localsearch stats
 ```
 
-The scanner and indexing commands are wired into the current CLI. Lexical, semantic, hybrid, and reranking implementations are available as Python modules while the complete retrieval workflow is being connected to the CLI and upcoming local API.
+The CLI now supports lexical, semantic, and hybrid retrieval modes. Use `--json` for machine-readable output and `--no-rerank` when comparing unfused candidate rankings.
 
 ## Result contract
 
